@@ -4110,7 +4110,7 @@ static PyMethodDef functions[] = {
 static int
 setup_module(PyObject *m) {
     PyObject *d = PyModule_GetDict(m);
-    const char *version = (char *)"9.0.0.dev0.post1";
+    const char *version = (char *)"8.4.0.post1";
 
     /* Ready object types */
     if (PyType_Ready(&Imaging_Type) < 0) {
@@ -4218,7 +4218,7 @@ setup_module(PyObject *m) {
     Py_INCREF(have_xcb);
     PyModule_AddObject(m, "HAVE_XCB", have_xcb);
 
-    PyDict_SetItemString(d, "9.0.0.dev0.post1", PyUnicode_FromString(version));
+    PyDict_SetItemString(d, "8.4.0.post1", PyUnicode_FromString(version));
 
     return 0;
 }
