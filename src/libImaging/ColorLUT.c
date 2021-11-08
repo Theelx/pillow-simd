@@ -1,12 +1,11 @@
 #include "Imaging.h"
 #include <math.h>
 
-
 /* 8 bits for result. Table can overflow [0, 1.0] range,
    so we need extra bits for overflow and negative values.
    NOTE: This value should be the same as in _imaging/_prepare_lut_table() */
 #define PRECISION_BITS (16 - 8 - 2)
-#define PRECISION_ROUNDING (1<<(PRECISION_BITS-1))
+#define PRECISION_ROUNDING (1 << (PRECISION_BITS - 1))
 
 /* 16 — UINT16 capacity
    6 — max index in the table
@@ -121,7 +120,6 @@ mm256_lut_pixel(INT16* table, int size2D_shift, int size3D_shift,
 }
 #endif
 
-
 /*
  Transforms colors of imIn using provided 3D lookup table
  and puts the result in imOut. Returns imOut on success or 0 on error.
@@ -138,10 +136,14 @@ mm256_lut_pixel(INT16* table, int size2D_shift, int size3D_shift,
     and 255 << PRECISION_BITS (16320) is highest value.
 */
 Imaging
-ImagingColorLUT3D_linear(Imaging imOut, Imaging imIn, int table_channels,
-                         int size1D, int size2D, int size3D,
-                         INT16* table)
-{
+ImagingColorLUT3D_linear(
+    Imaging imOut,
+    Imaging imIn,
+    int table_channels,
+    int size1D,
+    int size2D,
+    int size3D,
+    INT16 *table) {
     /* This float to int conversion doesn't have rounding
        error compensation (+0.5) for two reasons:
        1. As we don't hit the highest value,
@@ -208,17 +210,14 @@ ImagingColorLUT3D_linear(Imaging imOut, Imaging imIn, int table_channels,
         return NULL;
     }
 
-    if (imIn->type != IMAGING_TYPE_UINT8 ||
-        imOut->type != IMAGING_TYPE_UINT8 ||
-        imIn->bands < 3 ||
-        imOut->bands < table_channels
-    ) {
-        return (Imaging) ImagingError_ModeError();
+    if (imIn->type != IMAGING_TYPE_UINT8 || imOut->type != IMAGING_TYPE_UINT8 ||
+        imIn->bands < 3 || imOut->bands < table_channels) {
+        return (Imaging)ImagingError_ModeError();
     }
 
     /* In case we have one extra band in imOut and don't have in imIn.*/
     if (imOut->bands > table_channels && imOut->bands > imIn->bands) {
-        return (Imaging) ImagingError_ModeError();
+        return (Imaging)ImagingError_ModeError();
     }
 
     ImagingSectionEnter(&cookie);

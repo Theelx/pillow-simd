@@ -1,14 +1,19 @@
 #include "Imaging.h"
 
-
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
+typedef UINT32 pixel[16];
 
-void static inline
-ImagingLineBoxBlur32(UINT32 *lineOut, UINT32 *lineIn, int lastx, int radius, int edgeA,
-    int edgeB, UINT32 ww, UINT32 fw)
-{
+void static inline ImagingLineBoxBlur32(
+    UINT32 *lineOut,
+    UINT32 *lineIn,
+    int lastx,
+    int radius,
+    int edgeA,
+    int edgeB,
+    UINT32 ww,
+    UINT32 fw) {
     int x;
     __m128i acc;
     __m128i bulk;
@@ -70,8 +75,7 @@ ImagingLineBoxBlur32(UINT32 *lineOut, UINT32 *lineIn, int lastx, int radius, int
     ));
 
 
-    if (edgeA <= edgeB)
-    {
+    if (edgeA <= edgeB) {
         /* Subtract pixel from left ("0").
            Add pixels from radius. */
         for (x = 0; x < edgeA; x++) {
@@ -93,9 +97,7 @@ ImagingLineBoxBlur32(UINT32 *lineOut, UINT32 *lineIn, int lastx, int radius, int
             ADD_FAR(bulk, acc, x - radius - 1, lastx);
             SAVE(x, bulk);
         }
-    }
-    else
-    {
+    } else {
         for (x = 0; x < edgeB; x++) {
             MOVE_ACC(acc, 0, x + radius);
             ADD_FAR(bulk, acc, 0, x + radius + 1);
@@ -113,9 +115,9 @@ ImagingLineBoxBlur32(UINT32 *lineOut, UINT32 *lineIn, int lastx, int radius, int
         }
     }
 
-    #undef MOVE_ACC
-    #undef ADD_FAR
-    #undef SAVE
+#undef MOVE_ACC
+#undef ADD_FAR
+#undef SAVE
 }
 
 
@@ -187,14 +189,12 @@ ImagingLineBoxBlur8(UINT8 *lineOut, UINT8 *lineIn, int lastx, int radius, int ed
     UINT32 acc;
     UINT32 bulk;
 
-    #define MOVE_ACC(acc, subtract, add) \
-        acc += lineIn[add] - lineIn[subtract];
+#define MOVE_ACC(acc, subtract, add) acc += lineIn[add] - lineIn[subtract];
 
-    #define ADD_FAR(bulk, acc, left, right) \
-        bulk = (acc * ww) + (lineIn[left] + lineIn[right]) * fw;
+#define ADD_FAR(bulk, acc, left, right) \
+    bulk = (acc * ww) + (lineIn[left] + lineIn[right]) * fw;
 
-    #define SAVE(x, bulk) \
-        lineOut[x] = (UINT8)((bulk + (1 << 23)) >> 24)
+#define SAVE(x, bulk) lineOut[x] = (UINT8)((bulk + (1 << 23)) >> 24)
 
     acc = lineIn[0] * (radius + 1);
     for (x = 0; x < edgeA - 1; x++) {
@@ -202,8 +202,7 @@ ImagingLineBoxBlur8(UINT8 *lineOut, UINT8 *lineIn, int lastx, int radius, int ed
     }
     acc += lineIn[lastx] * (radius - edgeA + 1);
 
-    if (edgeA <= edgeB)
-    {
+    if (edgeA <= edgeB) {
         for (x = 0; x < edgeA; x++) {
             MOVE_ACC(acc, 0, x + radius);
             ADD_FAR(bulk, acc, 0, x + radius + 1);
@@ -219,9 +218,7 @@ ImagingLineBoxBlur8(UINT8 *lineOut, UINT8 *lineIn, int lastx, int radius, int ed
             ADD_FAR(bulk, acc, x - radius - 1, lastx);
             SAVE(x, bulk);
         }
-    }
-    else
-    {
+    } else {
         for (x = 0; x < edgeB; x++) {
             MOVE_ACC(acc, 0, x + radius);
             ADD_FAR(bulk, acc, 0, x + radius + 1);
@@ -239,9 +236,9 @@ ImagingLineBoxBlur8(UINT8 *lineOut, UINT8 *lineIn, int lastx, int radius, int ed
         }
     }
 
-    #undef MOVE_ACC
-    #undef ADD_FAR
-    #undef SAVE
+#undef MOVE_ACC
+#undef ADD_FAR
+#undef SAVE
 }
 
 
@@ -286,22 +283,22 @@ ImagingLineBoxBlurZero8(UINT8 *lineOut, UINT8 *lineIn, int lastx, int edgeA,
 
 
 Imaging
-ImagingHorizontalBoxBlur(Imaging imOut, Imaging imIn, float floatRadius)
-{
+ImagingHorizontalBoxBlur(Imaging imOut, Imaging imIn, float floatRadius) {
     ImagingSectionCookie cookie;
 
     int y;
 
-    int radius = (int) floatRadius;
-    UINT32 ww = (UINT32) (1 << 24) / (floatRadius * 2 + 1);
+    int radius = (int)floatRadius;
+    UINT32 ww = (UINT32)(1 << 24) / (floatRadius * 2 + 1);
     UINT32 fw = ((1 << 24) - (radius * 2 + 1) * ww) / 2;
 
     int edgeA = MIN(radius + 1, imIn->xsize);
     int edgeB = MAX(imIn->xsize - radius - 1, 0);
 
     UINT32 *lineOut = calloc(imIn->xsize, sizeof(UINT32));
-    if (lineOut == NULL)
+    if (lineOut == NULL) {
         return ImagingError_MemoryError();
+    }
 
     // printf(">>> radius: %d edges: %d %d, weights: %d %d\n",
     //     radius, edgeA, edgeB, ww, fw);
@@ -380,55 +377,49 @@ ImagingHorizontalBoxBlur(Imaging imOut, Imaging imIn, float floatRadius)
     return imOut;
 }
 
-
 Imaging
-ImagingBoxBlur(Imaging imOut, Imaging imIn, float radius, int n)
-{
+ImagingBoxBlur(Imaging imOut, Imaging imIn, float radius, int n) {
     int i;
     Imaging imTransposed;
 
     if (n < 1) {
-        return ImagingError_ValueError(
-            "number of passes must be greater than zero"
-        );
+        return ImagingError_ValueError("number of passes must be greater than zero");
     }
 
-    if (strcmp(imIn->mode, imOut->mode) ||
-        imIn->type  != imOut->type  ||
-        imIn->bands != imOut->bands ||
-        imIn->xsize != imOut->xsize ||
-        imIn->ysize != imOut->ysize)
+    if (strcmp(imIn->mode, imOut->mode) || imIn->type != imOut->type ||
+        imIn->bands != imOut->bands || imIn->xsize != imOut->xsize ||
+        imIn->ysize != imOut->ysize) {
         return ImagingError_Mismatch();
+    }
 
-    if (imIn->type != IMAGING_TYPE_UINT8)
+    if (imIn->type != IMAGING_TYPE_UINT8) {
         return ImagingError_ModeError();
+    }
 
-    if (!(strcmp(imIn->mode, "RGB") == 0 ||
-          strcmp(imIn->mode, "RGBA") == 0 ||
-          strcmp(imIn->mode, "RGBa") == 0 ||
-          strcmp(imIn->mode, "RGBX") == 0 ||
-          strcmp(imIn->mode, "CMYK") == 0 ||
-          strcmp(imIn->mode, "L") == 0 ||
-          strcmp(imIn->mode, "LA") == 0 ||
-          strcmp(imIn->mode, "La") == 0))
+    if (!(strcmp(imIn->mode, "RGB") == 0 || strcmp(imIn->mode, "RGBA") == 0 ||
+          strcmp(imIn->mode, "RGBa") == 0 || strcmp(imIn->mode, "RGBX") == 0 ||
+          strcmp(imIn->mode, "CMYK") == 0 || strcmp(imIn->mode, "L") == 0 ||
+          strcmp(imIn->mode, "LA") == 0 || strcmp(imIn->mode, "La") == 0)) {
         return ImagingError_ModeError();
+    }
 
     imTransposed = ImagingNewDirty(imIn->mode, imIn->ysize, imIn->xsize);
-    if (!imTransposed)
+    if (!imTransposed) {
         return NULL;
+    }
 
     /* Apply blur in one dimension.
        Use imOut as a destination at first pass,
        then use imOut as a source too. */
     ImagingHorizontalBoxBlur(imOut, imIn, radius);
-    for (i = 1; i < n; i ++) {
+    for (i = 1; i < n; i++) {
         ImagingHorizontalBoxBlur(imOut, imOut, radius);
     }
     /* Transpose result for blur in another direction. */
     ImagingTranspose(imTransposed, imOut);
 
     /* Reuse imTransposed as a source and destination there. */
-    for (i = 0; i < n; i ++) {
+    for (i = 0; i < n; i++) {
         ImagingHorizontalBoxBlur(imTransposed, imTransposed, radius);
     }
     /* Restore original orientation. */
@@ -439,14 +430,12 @@ ImagingBoxBlur(Imaging imOut, Imaging imIn, float radius, int n)
     return imOut;
 }
 
-
-Imaging ImagingGaussianBlur(Imaging imOut, Imaging imIn, float radius,
-    int passes)
-{
+Imaging
+ImagingGaussianBlur(Imaging imOut, Imaging imIn, float radius, int passes) {
     float sigma2, L, l, a;
 
     sigma2 = radius * radius / passes;
-    // from http://www.mia.uni-saarland.de/Publications/gwosdek-ssvm11.pdf
+    // from https://www.mia.uni-saarland.de/Publications/gwosdek-ssvm11.pdf
     // [7] Box length.
     L = sqrt(12.0 * sigma2 + 1.0);
     // [11] Integer part of box radius.

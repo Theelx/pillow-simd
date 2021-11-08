@@ -1,11 +1,13 @@
 import math
 
+import pytest
+
 from PIL import Image, ImageTransform
 
-from .helper import PillowTestCase, hopper
+from .helper import assert_image_equal, assert_image_similar, hopper
 
 
-class TestImageTransform(PillowTestCase):
+class TestImageTransform:
     def test_sanity(self):
         im = Image.new("L", (100, 100))
 
@@ -24,11 +26,16 @@ class TestImageTransform(PillowTestCase):
         comment = b"File written by Adobe Photoshop\xa8 4.0"
 
         with Image.open("Tests/images/hopper.gif") as im:
-            self.assertEqual(im.info["comment"], comment)
+            assert im.info["comment"] == comment
 
             transform = ImageTransform.ExtentTransform((0, 0, 0, 0))
             new_im = im.transform((100, 100), transform)
-        self.assertEqual(new_im.info["comment"], comment)
+        assert new_im.info["comment"] == comment
+
+    def test_palette(self):
+        with Image.open("Tests/images/hopper.gif") as im:
+            transformed = im.transform(im.size, Image.AFFINE, [1, 0, 0, 0, 1, 0])
+            assert im.palette.palette == transformed.palette.palette
 
     def test_extent(self):
         im = hopper("RGB")
@@ -43,7 +50,7 @@ class TestImageTransform(PillowTestCase):
         scaled = im.resize((w * 2, h * 2), Image.BILINEAR).crop((0, 0, w, h))
 
         # undone -- precision?
-        self.assert_image_similar(transformed, scaled, 23)
+        assert_image_similar(transformed, scaled, 23)
 
     def test_quad(self):
         # one simple quad transform, equivalent to scale & crop upper left quad
@@ -61,7 +68,7 @@ class TestImageTransform(PillowTestCase):
             (w, h), Image.AFFINE, (0.5, 0, 0, 0, 0.5, 0), Image.BILINEAR
         )
 
-        self.assert_image_equal(transformed, scaled)
+        assert_image_equal(transformed, scaled)
 
     def test_fill(self):
         for mode, pixel in [
@@ -79,7 +86,7 @@ class TestImageTransform(PillowTestCase):
                 fillcolor="red",
             )
 
-            self.assertEqual(transformed.getpixel((w - 1, h - 1)), pixel)
+            assert transformed.getpixel((w - 1, h - 1)) == pixel
 
     def test_mesh(self):
         # this should be a checkerboard of halfsized hoppers in ul, lr
@@ -104,13 +111,13 @@ class TestImageTransform(PillowTestCase):
         checker.paste(scaled, (0, 0))
         checker.paste(scaled, (w // 2, h // 2))
 
-        self.assert_image_equal(transformed, checker)
+        assert_image_equal(transformed, checker)
 
         # now, check to see that the extra area is (0, 0, 0, 0)
         blank = Image.new("RGBA", (w // 2, h // 2), (0, 0, 0, 0))
 
-        self.assert_image_equal(blank, transformed.crop((w // 2, 0, w, h // 2)))
-        self.assert_image_equal(blank, transformed.crop((0, h // 2, w // 2, h)))
+        assert_image_equal(blank, transformed.crop((w // 2, 0, w, h // 2)))
+        assert_image_equal(blank, transformed.crop((0, h // 2, w // 2, h)))
 
     def _test_alpha_premult(self, op):
         # create image with half white, half black,
@@ -126,7 +133,7 @@ class TestImageTransform(PillowTestCase):
         im_background.paste(im, (0, 0), im)
 
         hist = im_background.histogram()
-        self.assertEqual(40 * 10, hist[-1])
+        assert 40 * 10 == hist[-1]
 
     def test_alpha_premult_resize(self):
         def op(im, sz):
@@ -140,6 +147,41 @@ class TestImageTransform(PillowTestCase):
             return im.transform(sz, Image.EXTENT, (0, 0, w, h), Image.BILINEAR)
 
         self._test_alpha_premult(op)
+
+    def _test_nearest(self, op, mode):
+        # create white image with half transparent,
+        # do op,
+        # the image should remain white with half transparent
+        transparent, opaque = {
+            "RGBA": ((255, 255, 255, 0), (255, 255, 255, 255)),
+            "LA": ((255, 0), (255, 255)),
+        }[mode]
+        im = Image.new(mode, (10, 10), transparent)
+        im2 = Image.new(mode, (5, 10), opaque)
+        im.paste(im2, (0, 0))
+
+        im = op(im, (40, 10))
+
+        colors = im.getcolors()
+        assert colors == [
+            (20 * 10, opaque),
+            (20 * 10, transparent),
+        ]
+
+    @pytest.mark.parametrize("mode", ("RGBA", "LA"))
+    def test_nearest_resize(self, mode):
+        def op(im, sz):
+            return im.resize(sz, Image.NEAREST)
+
+        self._test_nearest(op, mode)
+
+    @pytest.mark.parametrize("mode", ("RGBA", "LA"))
+    def test_nearest_transform(self, mode):
+        def op(im, sz):
+            (w, h) = im.size
+            return im.transform(sz, Image.EXTENT, (0, 0, w, h), Image.NEAREST)
+
+        self._test_nearest(op, mode)
 
     def test_blank_fill(self):
         # attempting to hit
@@ -165,23 +207,18 @@ class TestImageTransform(PillowTestCase):
 
     def test_missing_method_data(self):
         with hopper() as im:
-            self.assertRaises(ValueError, im.transform, (100, 100), None)
+            with pytest.raises(ValueError):
+                im.transform((100, 100), None)
 
     def test_unknown_resampling_filter(self):
         with hopper() as im:
             (w, h) = im.size
             for resample in (Image.BOX, "unknown"):
-                self.assertRaises(
-                    ValueError,
-                    im.transform,
-                    (100, 100),
-                    Image.EXTENT,
-                    (0, 0, w, h),
-                    resample,
-                )
+                with pytest.raises(ValueError):
+                    im.transform((100, 100), Image.EXTENT, (0, 0, w, h), resample)
 
 
-class TestImageTransformAffine(PillowTestCase):
+class TestImageTransformAffine:
     transform = Image.AFFINE
 
     def _test_image(self):
@@ -214,7 +251,7 @@ class TestImageTransformAffine(PillowTestCase):
             transformed = im.transform(
                 transposed.size, self.transform, matrix, resample
             )
-            self.assert_image_equal(transposed, transformed)
+            assert_image_equal(transposed, transformed)
 
     def test_rotate_0_deg(self):
         self._test_rotate(0, None)
@@ -244,7 +281,7 @@ class TestImageTransformAffine(PillowTestCase):
             transformed = transformed.transform(
                 im.size, self.transform, matrix_down, resample
             )
-            self.assert_image_similar(transformed, im, epsilon * epsilonscale)
+            assert_image_similar(transformed, im, epsilon * epsilonscale)
 
     def test_resize_1_1x(self):
         self._test_resize(1.1, 6.9)
@@ -277,7 +314,7 @@ class TestImageTransformAffine(PillowTestCase):
             transformed = transformed.transform(
                 im.size, self.transform, matrix_down, resample
             )
-            self.assert_image_similar(transformed, im, epsilon * epsilonscale)
+            assert_image_similar(transformed, im, epsilon * epsilonscale)
 
     def test_translate_0_1(self):
         self._test_translate(0.1, 0, 3.7)

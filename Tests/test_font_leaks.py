@@ -1,12 +1,10 @@
-import unittest
+from PIL import Image, ImageDraw, ImageFont
 
-from PIL import Image, ImageDraw, ImageFont, features
-
-from .helper import PillowLeakTestCase
+from .helper import PillowLeakTestCase, skip_unless_feature
 
 
 class TestTTypeFontLeak(PillowLeakTestCase):
-    # fails at iteration 3 in master
+    # fails at iteration 3 in main
     iterations = 10
     mem_limit = 4096  # k
 
@@ -19,14 +17,14 @@ class TestTTypeFontLeak(PillowLeakTestCase):
             )
         )
 
-    @unittest.skipUnless(features.check("freetype2"), "Test requires freetype2")
+    @skip_unless_feature("freetype2")
     def test_leak(self):
         ttype = ImageFont.truetype("Tests/fonts/FreeMono.ttf", 20)
         self._test_font(ttype)
 
 
 class TestDefaultFontLeak(TestTTypeFontLeak):
-    # fails at iteration 37 in master
+    # fails at iteration 37 in main
     iterations = 100
     mem_limit = 1024  # k
 

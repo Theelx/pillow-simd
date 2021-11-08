@@ -1,46 +1,63 @@
-from PIL import FitsStubImagePlugin, Image
+from io import BytesIO
 
-from .helper import PillowTestCase
+import pytest
+
+from PIL import FitsStubImagePlugin, Image
 
 TEST_FILE = "Tests/images/hopper.fits"
 
 
-class TestFileFitsStub(PillowTestCase):
-    def test_open(self):
-        # Act
-        with Image.open(TEST_FILE) as im:
+def test_open():
+    # Act
+    with Image.open(TEST_FILE) as im:
 
-            # Assert
-            self.assertEqual(im.format, "FITS")
+        # Assert
+        assert im.format == "FITS"
+        assert im.size == (128, 128)
+        assert im.mode == "L"
 
-            # Dummy data from the stub
-            self.assertEqual(im.mode, "F")
-            self.assertEqual(im.size, (1, 1))
 
-    def test_invalid_file(self):
-        # Arrange
-        invalid_file = "Tests/images/flower.jpg"
+def test_invalid_file():
+    # Arrange
+    invalid_file = "Tests/images/flower.jpg"
 
-        # Act / Assert
-        self.assertRaises(
-            SyntaxError, FitsStubImagePlugin.FITSStubImageFile, invalid_file
-        )
+    # Act / Assert
+    with pytest.raises(SyntaxError):
+        FitsStubImagePlugin.FITSStubImageFile(invalid_file)
 
-    def test_load(self):
-        # Arrange
-        with Image.open(TEST_FILE) as im:
 
-            # Act / Assert: stub cannot load without an implemented handler
-            self.assertRaises(IOError, im.load)
+def test_load():
+    # Arrange
+    with Image.open(TEST_FILE) as im:
 
-    def test_save(self):
-        # Arrange
-        with Image.open(TEST_FILE) as im:
-            dummy_fp = None
-            dummy_filename = "dummy.filename"
+        # Act / Assert: stub cannot load without an implemented handler
+        with pytest.raises(OSError):
+            im.load()
 
-            # Act / Assert: stub cannot save without an implemented handler
-            self.assertRaises(IOError, im.save, dummy_filename)
-            self.assertRaises(
-                IOError, FitsStubImagePlugin._save, im, dummy_fp, dummy_filename
-            )
+
+def test_truncated_fits():
+    # No END to headers
+    image_data = b"SIMPLE  =                    T" + b" " * 50 + b"TRUNCATE"
+    with pytest.raises(OSError):
+        FitsStubImagePlugin.FITSStubImageFile(BytesIO(image_data))
+
+
+def test_naxis_zero():
+    # This test image has been manually hexedited
+    # to set the number of data axes to zero
+    with pytest.raises(ValueError):
+        with Image.open("Tests/images/hopper_naxis_zero.fits"):
+            pass
+
+
+def test_save():
+    # Arrange
+    with Image.open(TEST_FILE) as im:
+        dummy_fp = None
+        dummy_filename = "dummy.filename"
+
+        # Act / Assert: stub cannot save without an implemented handler
+        with pytest.raises(OSError):
+            im.save(dummy_filename)
+        with pytest.raises(OSError):
+            FitsStubImagePlugin._save(im, dummy_fp, dummy_filename)

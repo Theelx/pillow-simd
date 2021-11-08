@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.12)
 
 project(fribidi)
 
@@ -93,10 +93,10 @@ fribidi_tab(brackets-type unidata/BidiBrackets.txt)
 file(GLOB FRIBIDI_SOURCES lib/*.c)
 file(GLOB FRIBIDI_HEADERS lib/*.h)
 
-add_library(fribidi STATIC
+add_library(fribidi SHARED
 	${FRIBIDI_SOURCES}
 	${FRIBIDI_HEADERS}
 	${FRIBIDI_SOURCES_GENERATED})
 fribidi_definitions(fribidi)
 target_compile_definitions(fribidi
-	PUBLIC -DFRIBIDI_ENTRY=extern)
+	PUBLIC "-DFRIBIDI_BUILD")
