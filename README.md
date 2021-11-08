@@ -1,5 +1,6 @@
 # Use this at your own risk.
 I, Theelx, have no clue what I'm doing and I don't actually know C, but this library works for my intended usage (some jpg/png manipulations.)
+The repo has a version of 8.4.0.post1 because I screwed some stuff up and merged in the 9.0.0.dev0 branch and fixed merge conflicts for that, but then pip complained that 9.0.0.dev0.post1 was an invalid version when I ran ``make sdist`` so I figured I might as well switch to 8.4.0.post1 because I don't expect anyone else to use it anyway.
 
 # Pillow-SIMD
 
