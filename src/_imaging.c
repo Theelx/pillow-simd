@@ -4218,7 +4218,7 @@ setup_module(PyObject *m) {
     Py_INCREF(have_xcb);
     PyModule_AddObject(m, "HAVE_XCB", have_xcb);
 
-    PyDict_SetItemString(d, "8.4.0.post1", PyUnicode_FromString(version));
+    PyDict_SetItemString(d, "PILLOW_VERSION", PyUnicode_FromString(version));
 
     return 0;
 }
